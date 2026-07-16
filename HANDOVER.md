@@ -14,12 +14,12 @@
 | 項目 | 内容 |
 |---|---|
 | アプリ名 | 固定費チェッカー(電気代・サブスク) |
-| 公開URL | https://gryo1240.github.io/koteihi/ (※リポジトリ公開後に有効) |
+| 公開URL | https://gryo1240.github.io/koteihi/ |
 | 種別 | 家電の電気代・サブスク合計・毎月の固定費をまとめてチェックするWebアプリ(PWA・インストール可) |
 | 料金 / 登録 | 完全無料・アカウント登録不要・広告なし |
 | 対応端末 | スマホ(Android/iPhone)・PC のモダンブラウザ |
 | データの扱い | 入力データは端末内のみ(localStorage)。外部送信なし・同期機能なし |
-| リポジトリ | https://github.com/gryo1240/koteihi (予定) |
+| リポジトリ | https://github.com/gryo1240/koteihi (public・公開済み) |
 
 ### アプリの特徴(記事の訴求ポイント)
 
