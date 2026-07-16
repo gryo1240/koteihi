@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#2E7D5C">
+<title>固定費チェッカー — 電気代・サブスク・固定費まるごと計算</title>
+<meta name="description" content="家電の電気代、サブスクの合計、毎月の固定費をまとめてチェック。手取りに対する固定費の割合と見直しポイントがわかる無料アプリ。登録不要・データは端末内のみ。">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="こていひ">
+</head>
+<body>
+<style>
+:root{
+  --bg:#F2F6F3; --surface:#FFFFFF; --ink:#26302A; --muted:#6C7A71;
+  --line:#DDE6DF; --accent:#2E7D5C; --accent-ink:#FFFFFF; --accent-soft:#E3F0E8;
+  --warn:#B0563B; --warn-soft:#F6E9E3; --chip:#EAF0EB; --ok:#3E7A52; --okbg:#E5F0E9;
+  --shadow:0 1px 3px rgba(35,60,45,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#141A16; --surface:#1D2620; --ink:#E4ECE6; --muted:#93A398;
+    --line:#2F3B33; --accent:#8FC9AA; --accent-ink:#0D2A1C; --accent-soft:#24382C;
+    --warn:#D69073; --warn-soft:#3A2A21; --chip:#263129; --ok:#7FBE97; --okbg:#233A2C;
+    --shadow:0 1px 3px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="light"]{
+  --bg:#F2F6F3; --surface:#FFFFFF; --ink:#26302A; --muted:#6C7A71;
+  --line:#DDE6DF; --accent:#2E7D5C; --accent-ink:#FFFFFF; --accent-soft:#E3F0E8;
+  --warn:#B0563B; --warn-soft:#F6E9E3; --chip:#EAF0EB; --ok:#3E7A52; --okbg:#E5F0E9;
+  --shadow:0 1px 3px rgba(35,60,45,.08);
+}
+:root[data-theme="dark"]{
+  --bg:#141A16; --surface:#1D2620; --ink:#E4ECE6; --muted:#93A398;
+  --line:#2F3B33; --accent:#8FC9AA; --accent-ink:#0D2A1C; --accent-soft:#24382C;
+  --warn:#D69073; --warn-soft:#3A2A21; --chip:#263129; --ok:#7FBE97; --okbg:#233A2C;
+  --shadow:0 1px 3px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{background:var(--bg); color:var(--ink);
+  font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Noto Sans JP",Meiryo,sans-serif;
+  font-size:15px; line-height:1.6; -webkit-font-smoothing:antialiased;}
+#app{max-width:720px; margin:0 auto; padding:0 14px 84px;}
+header.top{position:sticky; top:0; z-index:20; background:var(--bg);
+  padding:14px 2px 10px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line);}
+header.top h1{font-size:18px; font-weight:700; letter-spacing:.02em;}
+header.top .sub{color:var(--muted); font-size:13px; font-variant-numeric:tabular-nums; margin-left:auto;}
+main{padding-top:14px;}
+h2{font-size:15px; font-weight:700; letter-spacing:.04em; margin:18px 0 8px;}
+.small{font-size:12.5px; color:var(--muted);}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow); padding:12px 14px; margin-bottom:10px;}
+button{font:inherit; cursor:pointer; border:none; border-radius:8px; padding:8px 14px; background:var(--chip); color:var(--ink);}
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+button.primary{background:var(--accent); color:var(--accent-ink); font-weight:700;}
+button.ghost{background:transparent; border:1px solid var(--line);}
+select,input[type=text],input[type=number],textarea{font:inherit; color:var(--ink); background:var(--surface);
+  border:1px solid var(--line); border-radius:8px; padding:7px 10px; max-width:100%;}
+input[type=number]{font-variant-numeric:tabular-nums;}
+textarea{width:100%; min-height:90px;}
+.row{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+.grow{flex:1 1 auto; min-width:0;}
+nav.tabs{position:fixed; bottom:0; left:0; right:0; z-index:30; background:var(--surface); border-top:1px solid var(--line); display:flex; justify-content:center;}
+nav.tabs .inner{display:flex; width:100%; max-width:720px;}
+nav.tabs button{flex:1; background:none; border-radius:0; padding:10px 0 12px; font-size:11.5px; color:var(--muted); display:flex; flex-direction:column; gap:2px; align-items:center;}
+nav.tabs button .ic{font-size:18px; line-height:1;}
+nav.tabs button.on{color:var(--accent); font-weight:700;}
+.chip{display:inline-block; font-size:12px; padding:3px 10px; border-radius:999px; background:var(--chip); color:var(--ink);}
+.chip.ng{background:var(--warn-soft); color:var(--warn); font-weight:700;}
+.chip.ok{background:var(--okbg); color:var(--ok); font-weight:700;}
+/* preset chips */
+.grouphead{font-size:12.5px; color:var(--muted); font-weight:700; letter-spacing:.05em; margin:10px 0 5px;}
+.chips{display:flex; flex-wrap:wrap; gap:6px;}
+.chips button{border:1px solid var(--line); background:var(--surface); font-size:13px; padding:6px 12px; border-radius:999px;}
+.chips button .p{color:var(--muted); font-size:11.5px;}
+/* result grid */
+.resgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
+@media (max-width:430px){ .resgrid{grid-template-columns:repeat(2,1fr);} }
+.res{background:var(--accent-soft); border-radius:8px; padding:8px 6px; text-align:center;}
+.res .l{font-size:11.5px; color:var(--muted);}
+.res .v{font-size:16px; font-weight:800; font-variant-numeric:tabular-nums;}
+.res.hero .v{color:var(--accent);}
+.big{font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:.01em;}
+.pnum{font-variant-numeric:tabular-nums;}
+/* list rows */
+.item{display:flex; align-items:center; gap:10px; padding:10px 2px; border-bottom:1px solid var(--line);}
+.item:last-child{border-bottom:none;}
+.item .nm{flex:1; min-width:0; background:none; border:none; padding:0; font:inherit; text-align:left; color:var(--ink); cursor:pointer;}
+.item .nm .t{font-weight:600;}
+.item .nm .s{font-size:12px; color:var(--muted);}
+.item .amt{font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
+.item.off .nm .t,.item.off .amt{color:var(--muted);}
+.f-row{margin:12px 0;}
+.f-row .lbl{font-size:12.5px; color:var(--muted); font-weight:700; letter-spacing:.05em; margin-bottom:5px;}
+.seg{display:flex; flex-wrap:wrap; gap:6px;}
+.seg button{padding:6px 12px; font-size:13px; border:1px solid var(--line); background:var(--surface);}
+.seg button.on{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:700;}
+/* fixed-cost form */
+.moneyrow{display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--line);}
+.moneyrow:last-child{border-bottom:none;}
+.moneyrow .lb{flex:1; min-width:0; font-size:14px;}
+.moneyrow .lb .hint{display:block; font-size:11.5px; color:var(--muted);}
+.moneyrow input{width:110px; text-align:right;}
+.moneyrow .yen{color:var(--muted); font-size:13px;}
+/* progress / ratio bar */
+.pbar{height:12px; background:var(--chip); border-radius:999px; overflow:hidden; position:relative;}
+.pbar>div{height:100%; background:var(--accent); border-radius:999px; transition:width .3s;}
+.pbar>div.over{background:var(--warn);}
+.pbar .mark{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--muted); opacity:.6;}
+@media (prefers-reduced-motion: reduce){ .pbar>div{transition:none;} }
+/* findings */
+.finding{border-left:4px solid var(--line); padding:2px 0 2px 10px; margin:10px 0;}
+.finding.ng{border-left-color:var(--warn);}
+.finding.ok{border-left-color:var(--ok);}
+.finding .ft{font-weight:700; font-size:14px;}
+.finding .fb{font-size:13.5px;}
+.finding .save{color:var(--warn); font-weight:800;}
+/* detail sheet */
+.overlay{position:fixed; inset:0; background:rgba(14,22,17,.45); z-index:40; display:flex; align-items:flex-end; justify-content:center;}
+.sheet{background:var(--surface); width:100%; max-width:720px; max-height:88vh; border-radius:14px 14px 0 0; padding:16px 16px 24px; overflow-y:auto;}
+.sheet h3{font-size:16px; margin-bottom:4px;}
+.notice{background:var(--warn-soft); border-radius:8px; padding:10px 12px; font-size:13.5px; margin-bottom:10px;}
+.okbox{background:var(--okbg); border-radius:8px; padding:9px 12px; font-size:13px; margin-top:8px;}
+details{margin-top:8px;}
+details summary{cursor:pointer; font-size:13.5px; padding:4px 0; font-weight:600;}
+.article h4{font-size:14px; margin:12px 0 4px;}
+.article p,.article li{font-size:13.5px;}
+.article ul,.article ol{padding-left:1.4em;}
+.article table{border-collapse:collapse; margin:6px 0; font-size:13px; width:100%;}
+.article th,.article td{border:1px solid var(--line); padding:4px 8px; text-align:right;}
+.article th:first-child,.article td:first-child{text-align:left;}
+</style>
+
+<div id="app">
+  <header class="top"><h1>固定費チェッカー</h1><span class="sub" id="hSub"></span></header>
+  <main>
+    <section id="tab-denki"></section>
+    <section id="tab-subs" hidden></section>
+    <section id="tab-fixed" hidden></section>
+    <section id="tab-check" hidden></section>
+    <section id="tab-settings" hidden></section>
+  </main>
+</div>
+<nav class="tabs"><div class="inner">
+  <button data-tab="denki" class="on"><span class="ic">⚡</span>電気代</button>
+  <button data-tab="subs"><span class="ic">📺</span>サブスク</button>
+  <button data-tab="fixed"><span class="ic">🏠</span>固定費</button>
+  <button data-tab="check"><span class="ic">💡</span>診断</button>
+  <button data-tab="settings"><span class="ic">⚙️</span>設定</button>
+</div></nav>
+<div id="modal"></div>
+
+<script>
+"use strict";
+/* ============ 家電プリセット(W数・1日の使用時間の目安) ============
+   消費電力は代表的な目安。実際は機種・設定で変わるため、結果はあくまで概算 */
+const PRESETS=[
+ {g:"冷暖房",items:[
+  ["エアコン(冷房)",500,8],["エアコン(暖房)",660,8],["セラミックヒーター",1200,3],
+  ["オイルヒーター",1200,6],["こたつ",200,5],["ホットカーペット",500,5],
+  ["電気毛布",50,8],["扇風機",30,8],["サーキュレーター",25,8]]},
+ {g:"キッチン",items:[
+  ["冷蔵庫",35,24],["電子レンジ",1300,0.2],["炊飯器(炊飯)",600,0.5],
+  ["電気ケトル",1250,0.1],["食洗機",750,1],["トースター",1000,0.2]]},
+ {g:"洗濯・水回り",items:[
+  ["洗濯機",500,0.5],["衣類乾燥機(ヒーター式)",1200,1.5],["浴室乾燥機",1250,2],
+  ["温水洗浄便座",15,24],["ドライヤー",1200,0.2]]},
+ {g:"リビング・仕事",items:[
+  ["テレビ",80,5],["ノートPC",30,8],["デスクトップPC",120,8],["ゲーム機",150,2],
+  ["Wi-Fiルーター",10,24],["空気清浄機",25,24],["加湿器(スチーム式)",260,8],
+  ["除湿機",250,8],["LEDシーリングライト",35,8],["白熱電球(60W)",60,8]]}
+];
+
+/* ============ サブスクプリセット(料金は2026年時点の目安・タップ後に実額へ修正可) ============ */
+const SUBP=[
+ ["Netflix",1590],["Amazonプライム",600],["YouTube Premium",1280],["Disney+",1140],
+ ["U-NEXT",2189],["Hulu",1026],["DAZN",4200],["Spotify",1080],["Apple Music",1080],
+ ["Kindle Unlimited",980],["Audible",1500],["iCloud+",450],["Google One",250],
+ ["ChatGPT Plus",3000],["ニコニコプレミアム",790],["楽天マガジン",572],
+ ["PlayStation Plus",1300],["ジム・フィットネス",7000]
+];
+const USE_LABEL={o:"よく使う",s:"たまに",x:"ほぼ使ってない"};
+
+/* ============ 固定費の項目 ============ */
+const FIXF=[
+ ["rent","家賃・住宅ローン","管理費・共益費も含めて"],
+ ["elec","電気代","先月の請求額でOK"],
+ ["gas","ガス代",""],
+ ["water","水道代","2ヶ月ごとの請求なら半分の額"],
+ ["phone","スマホ代(家族全員分)",""],
+ ["net","ネット回線",""],
+ ["ins","保険(生命・医療など)",""],
+ ["car","車(駐車場・保険・ローン)","車がなければ空欄でOK"],
+ ["other","その他(習い事・新聞など)",""]
+];
+
+/* ============ 知識記事 ============ */
+const ARTICLES=[
+ {t:"なぜ節約は「固定費から」なのか",b:`<p>節約には2種類あります。<b>変動費</b>(食費・おやつ・外食)を我慢する節約と、<b>固定費</b>(家賃・通信・サブスク・保険)を見直す節約です。</p>
+ <ul><li>変動費の節約は<b>毎日の我慢</b>が必要で、疲れて続かない</li>
+ <li>固定費の見直しは<b>一度の手続きで毎月ずっと効く</b>。我慢ゼロ</li></ul>
+ <p>たとえば月3,000円の使っていないサブスクを解約すると、それだけで<b>年36,000円</b>。おやつを我慢し続けるよりずっとラクで大きいのが固定費の見直しです。まずこのアプリで「毎月なにに固定でいくら払っているか」を全部見えるようにするのが第一歩です。</p>`},
+ {t:"電気代のしくみ — 計算式と「つけっぱなし」早見表",b:`<p>家電の電気代は次の式で概算できます。</p>
+ <p><b>消費電力(W) ÷ 1000 × 使った時間(h) × 電気単価(円/kWh)</b></p>
+ <p>電気単価は検針票(電気ご使用量のお知らせ)に載っています。全国の目安単価は<b>31円/kWh</b>(全国家庭電気製品公正取引協議会の公表値)。</p>
+ <h4>つけっぱなし1ヶ月(24時間×30日)の目安 @31円/kWh</h4>
+ <table><tr><th>消費電力</th><th>1ヶ月</th></tr>
+ <tr><td>10W(ルーター等)</td><td>約220円</td></tr>
+ <tr><td>50W(電気毛布等)</td><td>約1,100円</td></tr>
+ <tr><td>100W</td><td>約2,200円</td></tr>
+ <tr><td>500W(エアコン冷房等)</td><td>約11,200円</td></tr>
+ <tr><td>1200W(ヒーター等)</td><td>約26,800円</td></tr></table>
+ <p>ポイント: <b>「熱を作る家電」(ヒーター・ドライヤー・乾燥機)は電気代が高く</b>、モーターや電子機器(扇風機・PC・ルーター)は安い。セラミックヒーターの長時間運転は要注意、エアコン暖房のほうが同じ暖かさでも効率的なことが多いです。</p>`},
+ {t:"サブスク棚卸しの3ステップ",b:`<ol>
+ <li><b>全部書き出す</b> — スマホのサブスクリプション設定(App Store / Google Play)と、クレジットカードの明細を1ヶ月分見る。忘れているものが必ず出てきます。</li>
+ <li><b>年額に換算する</b> — 「月980円」は「年11,760円」。年額で見ると判断が変わります。このアプリは自動で年額換算します。</li>
+ <li><b>「ほぼ使ってない」を解約する</b> — 迷ったら一度解約。本当に必要ならまた入れます(ほとんどのサブスクは再開できます)。月イチしか見ない動画サービスは、見たい月だけ入る「都度入会」のほうが安いことも。</li></ol>
+ <p>解約はしにくい場所に置かれがちです。「サービス名 解約」で検索すると手順がすぐ見つかります。</p>`},
+ {t:"スマホ代を下げる考え方",b:`<p>総務省の調査などでは、大手キャリアのままの人と格安プランの人で<b>月数千円の差</b>があるのが実情です。目安として:</p>
+ <ul><li>大手キャリアの標準プラン: 月7,000〜9,000円前後</li>
+ <li>オンライン専用プラン(ahamo・povo・LINEMO等): 月2,000〜3,000円台</li>
+ <li>格安SIM(IIJmio・mineo等): 月1,000〜2,000円台</li></ul>
+ <p>仮に1人あたり月5,000円下がると、夫婦2人で<b>年12万円</b>。電話番号もそのまま乗り換えでき、手続きはオンラインで完結します。「通信品質が心配」という場合も、大手のオンライン専用プランなら回線は同じです。</p>
+ <p class="small">※料金は目安です。実際のプラン・料金は各社の最新情報を確認してください。</p>`},
+ {t:"固定費の理想バランス(手取り比の目安)",b:`<p>手取り月収に対する固定費の目安としてよく使われる数字です(家族構成や地域で変わるので、あくまで参考に)。</p>
+ <table><tr><th>項目</th><th>目安</th></tr>
+ <tr><td>住居費</td><td>25〜30%</td></tr>
+ <tr><td>水道光熱費</td><td>5〜7%</td></tr>
+ <tr><td>通信費(スマホ+ネット)</td><td>4〜6%</td></tr>
+ <tr><td>保険</td><td>3〜5%</td></tr>
+ <tr><td><b>固定費ぜんぶ</b></td><td><b>45%以下</b></td></tr></table>
+ <p>固定費が手取りの半分を超えていると、貯金や自由に使えるお金がかなり苦しくなります。逆に固定費を45%以下に抑えられれば、変動費を細かく節約しなくても家計は回りやすくなります。</p>`}
+];
+
+/* ============ 状態 ============ */
+const KEY="koteihi-v1";
+const $=s=>document.querySelector(s);
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function yen(n){
+  if(!isFinite(n)||n<=0) return "0";
+  if(n<10) return String(Math.round(n*10)/10);
+  return Math.round(n).toLocaleString("ja-JP");
+}
+function num(v){ const n=parseFloat(v); return isFinite(n)&&n>0?n:0; }
+function uid(p){ return p+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+let S=load();
+function load(){
+  try{ const raw=localStorage.getItem(KEY); if(raw){ const s=JSON.parse(raw); if(s&&s.fixed) return s; } }catch(e){}
+  return { unit:31, denki:[], subs:[], fixed:{}, income:0 };
+}
+let saveFailWarned=false;
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch(e){ if(!saveFailWarned){ saveFailWarned=true;
+    alert("端末内の保存容量がいっぱいで、変更を保存できませんでした。"); } }
+}
+
+/* ============ 計算ヘルパー ============ */
+function denkiMonth(it){ return it.w/1000*it.h*it.d*S.unit; }
+function denkiTotal(){ return S.denki.reduce((a,it)=>a+denkiMonth(it),0); }
+function subMonth(s){ return s.cycle==="y" ? s.price/12 : s.price; }
+function subsTotal(){ return S.subs.reduce((a,s)=>a+subMonth(s),0); }
+function subsWaste(){ return S.subs.filter(s=>s.use==="x").reduce((a,s)=>a+subMonth(s),0); }
+function fixedTotal(){
+  let t=subsTotal();
+  FIXF.forEach(([k])=>{ t+=num(S.fixed[k]); });
+  return t;
+}
+
+/* ============ 電気代タブ ============ */
+let C={name:"", w:0, h:1, d:30};  // 計算機の入力(保存前)
+function calcHtml(){
+  const perH=C.w/1000*S.unit;
+  const perDay=perH*C.h, perMonth=perDay*C.d, perYear=perMonth*12;
+  const full=C.w/1000*24*30*S.unit;
+  return `
+    <div class="resgrid">
+      <div class="res"><div class="l">1時間</div><div class="v">${yen(perH)}円</div></div>
+      <div class="res"><div class="l">1日(${C.h}h)</div><div class="v">${yen(perDay)}円</div></div>
+      <div class="res hero"><div class="l">1ヶ月(${C.d}日)</div><div class="v">${yen(perMonth)}円</div></div>
+      <div class="res"><div class="l">1年</div><div class="v">${yen(perYear)}円</div></div>
+    </div>
+    <p class="small" style="margin-top:6px">つけっぱなし(24時間×30日)なら 月 約<b>${yen(full)}円</b></p>`;
+}
+function renderDenki(){
+  const el=$("#tab-denki");
+  let html=`<div class="card">
+    <div class="row">
+      <label class="small grow">電気単価(円/kWh)
+        <input type="number" id="unitIn" value="${S.unit}" min="1" step="0.1" style="width:100%"></label>
+      <span class="small" style="flex:2 1 140px">全国の目安は31円。検針票の「電力量料金」を見るとより正確です。</span>
+    </div>
+  </div>`;
+  html+=`<div class="card">
+    <div class="f-row" style="margin-top:0"><div class="lbl">家電の電気代を計算</div>
+      <div class="row">
+        <input type="text" id="cName" placeholder="家電の名前" value="${esc(C.name)}" class="grow">
+        <label class="small">W数 <input type="number" id="cW" value="${C.w||""}" min="0" style="width:80px"></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="small">1日 <input type="number" id="cH" value="${C.h}" min="0" max="24" step="0.1" style="width:70px"> 時間</label>
+        <label class="small">月 <input type="number" id="cD" value="${C.d}" min="1" max="31" style="width:64px"> 日</label>
+        <span class="seg" id="hChips">
+          ${[0.5,1,3,8,24].map(h=>`<button data-h="${h}" class="${C.h===h?"on":""}">${h===24?"24h(常時)":h+"h"}</button>`).join("")}
+        </span>
+      </div>
+    </div>
+    <div id="calcRes">${calcHtml()}</div>
+    <button class="primary" id="cAdd" style="width:100%; margin-top:10px">＋ わが家の家電リストに追加</button>
+  </div>`;
+  html+=`<div class="card"><p class="small" style="margin-bottom:2px">↓タップすると上の計算機に入ります(W数は代表的な目安)</p>`;
+  PRESETS.forEach(g=>{
+    html+=`<div class="grouphead">${esc(g.g)}</div><div class="chips">`;
+    g.items.forEach(([n,w,h],i)=>{ html+=`<button data-pre="${esc(g.g)}|${i}">${esc(n)} <span class="p">${w}W</span></button>`; });
+    html+=`</div>`;
+  });
+  html+=`</div>`;
+  if(S.denki.length){
+    html+=`<h2>わが家の家電 <span class="small pnum">月 約${yen(denkiTotal())}円</span></h2><div class="card">`;
+    S.denki.forEach(it=>{
+      html+=`<div class="item">
+        <button class="nm" data-edit="${it.id}">
+          <div class="t">${esc(it.name)}</div>
+          <div class="s">${it.w}W × ${it.h}h/日 × ${it.d}日</div>
+        </button>
+        <span class="amt">月 ${yen(denkiMonth(it))}円</span>
+        <button class="ghost" data-del="${it.id}" aria-label="削除">✕</button>
+      </div>`;
+    });
+    html+=`<p class="small" style="margin-top:8px">合計はあくまで概算です。実際の請求額は基本料金・燃料費調整などが加わります。</p></div>`;
+  }
+  el.innerHTML=html;
+  $("#unitIn").onchange=e=>{ S.unit=num(e.target.value)||31; save(); renderDenki(); updateHead(); };
+  const upd=()=>{ $("#calcRes").innerHTML=calcHtml(); };
+  $("#cName").oninput=e=>{ C.name=e.target.value; };
+  $("#cW").oninput=e=>{ C.w=num(e.target.value); upd(); };
+  $("#cH").oninput=e=>{ C.h=Math.min(24,num(e.target.value)); upd(); };
+  $("#cD").oninput=e=>{ C.d=Math.min(31,num(e.target.value)||30); upd(); };
+  el.querySelectorAll("#hChips button").forEach(b=>b.onclick=()=>{ C.h=parseFloat(b.dataset.h); renderDenki(); });
+  el.querySelectorAll("[data-pre]").forEach(b=>b.onclick=()=>{
+    const [g,i]=b.dataset.pre.split("|");
+    const grp=PRESETS.find(x=>x.g===g); const [n,w,h]=grp.items[+i];
+    C={name:n, w, h, d:30}; renderDenki();
+    window.scrollTo({top:0, behavior:"smooth"});
+  });
+  $("#cAdd").onclick=()=>{
+    if(!C.w){ alert("W数(消費電力)を入れてください。家電本体のシールや説明書に書いてあります。"); return; }
+    S.denki.push({id:uid("d"), name:C.name||"家電", w:C.w, h:C.h, d:C.d});
+    save(); renderDenki(); updateHead();
+  };
+  el.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{
+    const it=S.denki.find(x=>x.id===b.dataset.edit); if(!it) return;
+    C={name:it.name, w:it.w, h:it.h, d:it.d};
+    S.denki=S.denki.filter(x=>x.id!==it.id);
+    save(); renderDenki(); updateHead();
+    window.scrollTo({top:0, behavior:"smooth"});
+  });
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    S.denki=S.denki.filter(x=>x.id!==b.dataset.del);
+    save(); renderDenki(); updateHead();
+  });
+}
+
+/* ============ サブスクタブ ============ */
+function renderSubs(){
+  const el=$("#tab-subs");
+  const total=subsTotal(), waste=subsWaste();
+  let html=`<div class="card">
+    <div class="row"><span class="grow">サブスク合計</span>
+      <span class="big">月 ${yen(total)}円</span></div>
+    <p class="small pnum">年に換算すると ${yen(total*12)}円</p>
+    ${waste>0?`<div class="okbox">💡「ほぼ使ってない」を解約すると <b>年 ${yen(waste*12)}円</b> 浮きます</div>`:""}
+  </div>`;
+  html+=`<div class="card"><p class="small" style="margin-bottom:4px">よくあるサブスク(タップで追加。料金は目安なので、追加後に実際の請求額へ直してください)</p>
+    <div class="chips">${SUBP.map(([n,p],i)=>`<button data-sub="${i}" ${S.subs.some(s=>s.name===n)?"disabled style='opacity:.4'":""}>${esc(n)} <span class="p">${p.toLocaleString()}円</span></button>`).join("")}</div>
+  </div>`;
+  html+=`<div class="card">
+    <div class="f-row" style="margin:0"><div class="lbl">手入力で追加</div>
+      <div class="row">
+        <input type="text" id="sName" placeholder="名前(例: 新聞)" class="grow">
+        <input type="number" id="sPrice" placeholder="金額" min="0" style="width:90px">
+        <span class="seg" id="sCycle"><button data-c="m" class="on">月払い</button><button data-c="y">年払い</button></span>
+        <button class="primary" id="sAdd">追加</button>
+      </div>
+    </div>
+  </div>`;
+  if(S.subs.length){
+    html+=`<h2>登録したサブスク</h2><div class="card">`;
+    [...S.subs].sort((a,b)=>subMonth(b)-subMonth(a)).forEach(s=>{
+      html+=`<div class="item ${s.use==="x"?"off":""}">
+        <button class="nm" data-open="${s.id}">
+          <div class="t">${esc(s.name)}</div>
+          <div class="s">${s.cycle==="y"?`年払い ${yen(s.price)}円`:"月払い"} / <span class="${s.use==="x"?"":""}">${USE_LABEL[s.use]||"よく使う"}</span></div>
+        </button>
+        <span class="amt">月 ${yen(subMonth(s))}円</span>
+        ${s.use==="x"?`<span class="chip ng">見直し</span>`:""}
+      </div>`;
+    });
+    html+=`<p class="small" style="margin-top:8px">タップすると金額・使用頻度を変えられます。</p></div>`;
+  } else {
+    html+=`<div class="card"><p class="small">まだ登録がありません。上のボタンから追加すると、月と年の合計が出ます。クレジットカードの明細を1ヶ月分見ながらやるのがおすすめ(忘れてるものが必ず出てきます)。</p></div>`;
+  }
+  el.innerHTML=html;
+  let newCycle="m";
+  el.querySelectorAll("#sCycle button").forEach(b=>b.onclick=()=>{
+    newCycle=b.dataset.c;
+    el.querySelectorAll("#sCycle button").forEach(x=>x.classList.toggle("on",x===b));
+  });
+  el.querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>{
+    const [n,p]=SUBP[+b.dataset.sub];
+    S.subs.push({id:uid("s"), name:n, price:p, cycle:"m", use:"o"});
+    save(); renderSubs(); updateHead();
+  });
+  $("#sAdd").onclick=()=>{
+    const n=$("#sName").value.trim(), p=num($("#sPrice").value);
+    if(!n||!p){ alert("名前と金額を入れてください。"); return; }
+    S.subs.push({id:uid("s"), name:n, price:p, cycle:newCycle, use:"o"});
+    save(); renderSubs(); updateHead();
+  };
+  el.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>openSub(b.dataset.open));
+}
+function openSub(id){
+  const s=S.subs.find(x=>x.id===id); if(!s) return;
+  const m=$("#modal");
+  m.innerHTML=`<div class="overlay" id="ov"><div class="sheet">
+    <h3>サブスクの編集</h3>
+    <div class="f-row"><div class="lbl">名前</div><input type="text" id="eName" value="${esc(s.name)}" style="width:100%"></div>
+    <div class="f-row"><div class="lbl">金額</div>
+      <div class="row"><input type="number" id="ePrice" value="${s.price}" min="0" style="width:110px">
+      <span class="seg" id="eCycle">
+        <button data-c="m" class="${s.cycle!=="y"?"on":""}">月払い</button>
+        <button data-c="y" class="${s.cycle==="y"?"on":""}">年払い</button>
+      </span></div></div>
+    <div class="f-row"><div class="lbl">どのくらい使ってる?</div>
+      <div class="seg" id="eUse">
+        <button data-u="o" class="${s.use==="o"?"on":""}">よく使う</button>
+        <button data-u="s" class="${s.use==="s"?"on":""}">たまに</button>
+        <button data-u="x" class="${s.use==="x"?"on":""}">ほぼ使ってない</button>
+      </div></div>
+    <div class="row" style="margin-top:10px">
+      <button class="primary grow" id="eSave">保存</button>
+      <button class="ghost" id="eDel" style="color:var(--warn)">解約した(削除)</button>
+      <button id="eClose">閉じる</button>
+    </div>
+  </div></div>`;
+  let cyc=s.cycle, use=s.use;
+  m.querySelectorAll("#eCycle button").forEach(b=>b.onclick=()=>{ cyc=b.dataset.c;
+    m.querySelectorAll("#eCycle button").forEach(x=>x.classList.toggle("on",x===b)); });
+  m.querySelectorAll("#eUse button").forEach(b=>b.onclick=()=>{ use=b.dataset.u;
+    m.querySelectorAll("#eUse button").forEach(x=>x.classList.toggle("on",x===b)); });
+  $("#eSave").onclick=()=>{
+    s.name=$("#eName").value.trim()||s.name;
+    s.price=num($("#ePrice").value)||s.price;
+    s.cycle=cyc; s.use=use;
+    save(); m.innerHTML=""; renderSubs(); updateHead();
+  };
+  $("#eDel").onclick=()=>{
+    S.subs=S.subs.filter(x=>x.id!==id);
+    save(); m.innerHTML=""; renderSubs(); updateHead();
+  };
+  $("#eClose").onclick=()=>m.innerHTML="";
+  $("#ov").onclick=e=>{ if(e.target.id==="ov") m.innerHTML=""; };
+}
+
+/* ============ 固定費タブ ============ */
+function ratioComment(pct){
+  if(pct<=40) return `<span class="chip ok">良好(40%以下)</span> 貯金しやすい家計です`;
+  if(pct<=45) return `<span class="chip ok">目安の範囲(45%以下)</span>`;
+  if(pct<=50) return `<span class="chip">やや高め</span> 見直せる項目がないか診断タブへ`;
+  return `<span class="chip ng">高い(50%超)</span> 固定費が手取りの半分を超えています`;
+}
+function renderFixed(){
+  const el=$("#tab-fixed");
+  const subM=subsTotal(), total=fixedTotal(), inc=num(S.income);
+  let html=`<div class="card">
+    <div class="row"><span class="grow">固定費 合計</span><span class="big">月 ${yen(total)}円</span></div>
+    <p class="small pnum">年に換算すると ${yen(total*12)}円</p>`;
+  if(inc>0&&total>0){
+    const pct=Math.round(total/inc*100);
+    html+=`<div style="margin-top:8px">
+      <div class="row"><span class="small grow">手取りに対する固定費</span><b class="pnum">${pct}%</b></div>
+      <div class="pbar" style="margin-top:4px"><div class="${pct>45?"over":""}" style="width:${Math.min(100,pct)}%"></div><span class="mark" style="left:45%"></span></div>
+      <p class="small" style="margin-top:4px">${ratioComment(pct)}(縦線=目安の45%)</p>
+    </div>`;
+  }
+  html+=`</div>`;
+  html+=`<div class="card">
+    <div class="moneyrow"><span class="lb">手取り月収(任意)<span class="hint">入れると固定費の割合を診断できます</span></span>
+      <input type="number" data-inc="1" value="${inc||""}" min="0" placeholder="0"><span class="yen">円</span></div>
+  </div>`;
+  html+=`<div class="card">`;
+  FIXF.forEach(([k,label,hint])=>{
+    html+=`<div class="moneyrow"><span class="lb">${esc(label)}${hint?`<span class="hint">${esc(hint)}</span>`:""}</span>
+      <input type="number" data-fix="${k}" value="${num(S.fixed[k])||""}" min="0" placeholder="0"><span class="yen">円</span></div>`;
+  });
+  html+=`<div class="moneyrow"><span class="lb">サブスク合計<span class="hint">サブスクタブから自動で入ります</span></span>
+    <b class="pnum">${yen(subM)}</b><span class="yen">円</span></div>`;
+  html+=`</div>`;
+  if(inc>0&&total>0){
+    const g={rent:[num(S.fixed.rent),"住居費","25〜30%",30],
+             util:[num(S.fixed.elec)+num(S.fixed.gas)+num(S.fixed.water),"水道光熱費","5〜7%",7],
+             comm:[num(S.fixed.phone)+num(S.fixed.net),"通信費","4〜6%",6],
+             ins:[num(S.fixed.ins),"保険","3〜5%",5]};
+    html+=`<h2>内訳と目安</h2><div class="card">`;
+    Object.values(g).forEach(([v,label,guide,max])=>{
+      if(v<=0) return;
+      const p=Math.round(v/inc*100);
+      html+=`<div class="moneyrow"><span class="lb">${label}<span class="hint">目安 ${guide}</span></span>
+        <span class="pnum" style="font-weight:700; ${p>max?"color:var(--warn)":""}">${p}%</span>
+        <span class="yen">(${yen(v)}円)</span></div>`;
+    });
+    html+=`<p class="small" style="margin-top:8px">目安は一般によく使われる手取り比です。家族構成・地域で変わるので参考程度に。</p></div>`;
+  }
+  el.innerHTML=html;
+  el.querySelectorAll("[data-fix]").forEach(i=>i.onchange=()=>{
+    S.fixed[i.dataset.fix]=num(i.value); save(); renderFixed(); updateHead();
+  });
+  const incIn=el.querySelector("[data-inc]");
+  incIn.onchange=()=>{ S.income=num(incIn.value); save(); renderFixed(); };
+}
+
+/* ============ 診断タブ ============ */
+function findings(){
+  const out=[];
+  const inc=num(S.income), total=fixedTotal();
+  const xs=S.subs.filter(s=>s.use==="x"), ss=S.subs.filter(s=>s.use==="s");
+  if(xs.length){
+    const y=xs.reduce((a,s)=>a+subMonth(s),0)*12;
+    out.push({lv:"ng", t:`「ほぼ使ってない」サブスクが${xs.length}件`,
+      b:`${xs.map(s=>esc(s.name)).join("、")}。解約すると <span class="save">年 ${yen(y)}円</span> 浮きます。迷ったら一度解約(必要ならまた入れます)。`});
+  }
+  if(ss.length){
+    const y=ss.reduce((a,s)=>a+subMonth(s),0)*12;
+    out.push({lv:"", t:`「たまに」のサブスクが${ss.length}件(年 ${yen(y)}円)`,
+      b:`月イチ以下しか使わない動画・雑誌系は、見たい月だけ入り直す「都度入会」のほうが安いことがあります。`});
+  }
+  const phone=num(S.fixed.phone);
+  if(phone>=8000){
+    out.push({lv:"ng", t:`スマホ代 月${yen(phone)}円は下げられる可能性大`,
+      b:`オンライン専用プラン(ahamo・povo・LINEMO等)や格安SIMなら1人あたり月2,000〜3,000円台が相場。仮に月5,000円下がると <span class="save">年 60,000円</span>。詳しくは下の記事へ。`});
+  }else if(phone>0&&phone<6000){
+    out.push({lv:"ok", t:"スマホ代は優秀", b:`月${yen(phone)}円なら十分抑えられています。`});
+  }
+  if(inc>0&&total>0){
+    const pct=Math.round(total/inc*100);
+    const rent=num(S.fixed.rent);
+    if(rent>0&&rent/inc>0.32){
+      out.push({lv:"", t:`住居費が手取りの${Math.round(rent/inc*100)}%(目安25〜30%)`,
+        b:`住居費は最大の固定費ですが、引っ越しは大ごと。更新のタイミングで家賃交渉や住み替えを検討する程度でOK。まず他の項目から。`});
+    }
+    const ins=num(S.fixed.ins);
+    if(ins>0&&ins/inc>0.06){
+      out.push({lv:"", t:`保険が手取りの${Math.round(ins/inc*100)}%(目安3〜5%)`,
+        b:`「なんとなく入ったまま」の保険は要チェック。掛け捨てへの切り替えや重複の整理で下がることが多い項目です。`});
+    }
+    if(pct<=45){
+      out.push({lv:"ok", t:`固定費は手取りの${pct}% — 目安の45%以下です`,
+        b:`このバランスなら、変動費を細かく我慢しなくても家計は回りやすいはず。`});
+    }else{
+      out.push({lv:"ng", t:`固定費が手取りの${pct}%(目安45%以下)`,
+        b:`まずサブスク・スマホ・保険の3つから。この3つは我慢ゼロで下げられる固定費です。`});
+    }
+  }
+  const car=num(S.fixed.car);
+  if(car>=30000){
+    out.push({lv:"", t:`車関連が年 ${yen(car*12)}円`,
+      b:`週末しか乗らないなら、カーシェア・レンタカーとの比較も。ただし生活に必要な地域では無理に削る項目ではありません。`});
+  }
+  return out;
+}
+function renderCheck(){
+  const el=$("#tab-check");
+  const f=findings();
+  let html="";
+  if(!S.subs.length&&!Object.values(S.fixed).some(v=>num(v)>0)){
+    html+=`<div class="card"><p class="small">まだデータがありません。<b>サブスク</b>タブと<b>固定費</b>タブに入力すると、ここに「見直しポイント」と「浮く金額」が出ます。</p></div>`;
+  } else if(!f.length){
+    html+=`<div class="card"><p class="small">今の入力からは大きな見直しポイントは見つかりませんでした。手取り月収(固定費タブ)を入れると割合の診断もできます。</p></div>`;
+  } else {
+    html+=`<div class="card">`;
+    f.forEach(x=>{ html+=`<div class="finding ${x.lv}"><div class="ft">${x.t}</div><div class="fb">${x.b}</div></div>`; });
+    html+=`<p class="small" style="margin-top:6px">※金額・相場は一般的な目安です。契約内容によって変わります。</p></div>`;
+  }
+  html+=`<h2>知っておくと得する知識</h2>`+
+    ARTICLES.map((a,i)=>`<div class="card article"><details ${i===0?"open":""}><summary>${esc(a.t)}</summary>${a.b}</details></div>`).join("");
+  el.innerHTML=html;
+}
+
+/* ============ 設定タブ ============ */
+function renderSettings(){
+  const el=$("#tab-settings");
+  el.innerHTML=`
+  <div class="card">
+    <h2 style="margin-top:0">このアプリについて</h2>
+    <p class="small">入力したデータはすべて<b>この端末の中にだけ</b>保存されます。外部への送信はありません。アカウント登録も不要です。</p>
+    <p class="small" style="margin-top:6px">電気代・料金・相場はあくまで目安です。実際の請求額・契約内容を優先してください。</p>
+  </div>
+  <div class="card">
+    <h2 style="margin-top:0">データ</h2>
+    <div class="row">
+      <button id="btnExport" class="ghost">書き出す(コピー)</button>
+      <button id="btnImport" class="ghost">貼り付けて読み込む</button>
+      <button id="btnReset" class="ghost" style="color:var(--warn)">全データ初期化</button>
+    </div>
+    <textarea id="ioArea" placeholder="書き出し結果 / 読み込み時はここに貼り付け" style="margin-top:8px"></textarea>
+    <p class="small">機種変更のときは「書き出す」の文字列をメール等で送り、新しい端末で「読み込む」。</p>
+  </div>`;
+  $("#btnExport").onclick=()=>{
+    const t=JSON.stringify(S);
+    $("#ioArea").value=t; copyText(t,$("#btnExport"),"✅ コピーしました");
+  };
+  $("#btnImport").onclick=()=>{
+    try{
+      const o=JSON.parse($("#ioArea").value); if(!o||!o.fixed) throw 0;
+      S=o; save(); render(); alert("読み込みました");
+    }catch(e){ alert("読み込めませんでした。書き出した文字列をそのまま貼ってください。"); }
+  };
+  $("#btnReset").onclick=()=>{
+    if(confirm("この端末のデータをすべて消します。よろしいですか?")){
+      localStorage.removeItem(KEY); location.reload();
+    }
+  };
+}
+function copyText(t,btn,doneLabel){
+  const ok=()=>{ if(btn) btn.textContent=doneLabel; };
+  const fb=()=>{ const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); ok(); }catch(e){ alert("コピーできませんでした"); } ta.remove(); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok).catch(fb); } else fb();
+}
+
+/* ============ タブ・起動 ============ */
+let tab="denki";
+document.querySelectorAll("nav.tabs button").forEach(b=>{
+  b.addEventListener("click",()=>{ tab=b.dataset.tab; render(); });
+});
+function updateHead(){
+  const total=fixedTotal();
+  $("#hSub").textContent=total>0?`固定費 月 ${yen(total)}円`:"";
+}
+function render(){
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
+  ["denki","subs","fixed","check","settings"].forEach(t=>{ $("#tab-"+t).hidden=(t!==tab); });
+  if(tab==="denki") renderDenki();
+  if(tab==="subs") renderSubs();
+  if(tab==="fixed") renderFixed();
+  if(tab==="check") renderCheck();
+  if(tab==="settings") renderSettings();
+  updateHead();
+}
+render();
+</script>
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js");
+</script>
+</body>
+</html>
