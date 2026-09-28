@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#2E7D5C">
+<meta name="theme-color" content="#256B4D">
 <title>固定費チェッカー — 電気代・サブスク・固定費まるごと計算</title>
 <meta name="description" content="家電の電気代、サブスクの合計、毎月の固定費をまとめてチェック。手取りに対する固定費の割合と見直しポイントがわかる無料アプリ。登録不要・データは端末内のみ。">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -12,34 +12,41 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="こていひ">
+<script src="jp-phrase-3.js" defer></script>
 </head>
 <body>
 <style>
+/* ===== 2026-09-28 刷新:「検針票（電気ご使用量のお知らせ）」 =====
+   見せ場は1つ: 電気代の4マスを、検針員の端末から出る細長い感熱紙の明細として組む（等幅の数字・点線の区切り・上下は真っすぐな切り口）。
+   紙にするのはこの4マスだけ。手取り比の棒・診断などは落ち着いた家計の画面のまま。
+   色は紙の白・墨・深い緑の3系統（見直しの金額だけ朱）。数字が増えていく演出は付けない。絵文字は使わない */
 :root{
-  --bg:#F2F6F3; --surface:#FFFFFF; --ink:#26302A; --muted:#6C7A71;
-  --line:#DDE6DF; --accent:#2E7D5C; --accent-ink:#FFFFFF; --accent-soft:#E3F0E8;
-  --warn:#B0563B; --warn-soft:#F6E9E3; --chip:#EAF0EB; --ok:#3E7A52; --okbg:#E5F0E9;
-  --shadow:0 1px 3px rgba(35,60,45,.08);
+  --bg:#EFF2EE; --surface:#FFFFFF; --ink:#23302A; --muted:#61706A;
+  --line:#D6DED8; --accent:#256B4D; --accent-ink:#FFFFFF; --accent-soft:#E2EDE6;
+  --warn:#A44E2E; --warn-soft:#F5E7E0; --chip:#E6ECE7; --ok:#256B4D; --okbg:#E2EDE6;
+  --slip:#F8F8F4; --slip-ink:#3A3D3B; --slip-line:#B9BDB8;
+  --mono:ui-monospace,"SFMono-Regular","Cascadia Mono",Consolas,Menlo,monospace;
+  --shadow:none;
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#141A16; --surface:#1D2620; --ink:#E4ECE6; --muted:#93A398;
-    --line:#2F3B33; --accent:#8FC9AA; --accent-ink:#0D2A1C; --accent-soft:#24382C;
-    --warn:#D69073; --warn-soft:#3A2A21; --chip:#263129; --ok:#7FBE97; --okbg:#233A2C;
-    --shadow:0 1px 3px rgba(0,0,0,.35);
+    --bg:#141A17; --surface:#1C2420; --ink:#E3EBE6; --muted:#98A79F;
+    --line:#2E3A34; --accent:#8CCBA9; --accent-ink:#0C2419; --accent-soft:#223A2E;
+    --warn:#E0977A; --warn-soft:#3A2A22; --chip:#25302A; --ok:#8CCBA9; --okbg:#223A2E;
+    --slip:#E9EAE5; --slip-ink:#2E312F; --slip-line:#A9ADA7;
   }
 }
 :root[data-theme="light"]{
-  --bg:#F2F6F3; --surface:#FFFFFF; --ink:#26302A; --muted:#6C7A71;
-  --line:#DDE6DF; --accent:#2E7D5C; --accent-ink:#FFFFFF; --accent-soft:#E3F0E8;
-  --warn:#B0563B; --warn-soft:#F6E9E3; --chip:#EAF0EB; --ok:#3E7A52; --okbg:#E5F0E9;
-  --shadow:0 1px 3px rgba(35,60,45,.08);
+  --bg:#EFF2EE; --surface:#FFFFFF; --ink:#23302A; --muted:#61706A;
+  --line:#D6DED8; --accent:#256B4D; --accent-ink:#FFFFFF; --accent-soft:#E2EDE6;
+  --warn:#A44E2E; --warn-soft:#F5E7E0; --chip:#E6ECE7; --ok:#256B4D; --okbg:#E2EDE6;
+  --slip:#F8F8F4; --slip-ink:#3A3D3B; --slip-line:#B9BDB8;
 }
 :root[data-theme="dark"]{
-  --bg:#141A16; --surface:#1D2620; --ink:#E4ECE6; --muted:#93A398;
-  --line:#2F3B33; --accent:#8FC9AA; --accent-ink:#0D2A1C; --accent-soft:#24382C;
-  --warn:#D69073; --warn-soft:#3A2A21; --chip:#263129; --ok:#7FBE97; --okbg:#233A2C;
-  --shadow:0 1px 3px rgba(0,0,0,.35);
+  --bg:#141A17; --surface:#1C2420; --ink:#E3EBE6; --muted:#98A79F;
+  --line:#2E3A34; --accent:#8CCBA9; --accent-ink:#0C2419; --accent-soft:#223A2E;
+  --warn:#E0977A; --warn-soft:#3A2A22; --chip:#25302A; --ok:#8CCBA9; --okbg:#223A2E;
+  --slip:#E9EAE5; --slip-ink:#2E312F; --slip-line:#A9ADA7;
 }
 *{box-sizing:border-box; margin:0; padding:0;}
 html,body{background:var(--bg); color:var(--ink);
@@ -54,45 +61,58 @@ html,body{background:var(--bg); color:var(--ink);
    確実に固定する */
 body{position:relative;}
 #scroll-area{height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch;}
-#app{max-width:720px; margin:0 auto; padding:0 14px 84px;}
+#app{max-width:720px; margin:0 auto; padding:0 14px 70px;}
 header.top{position:sticky; top:0; z-index:20; background:var(--bg);
-  padding:8px 2px 6px; display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line);}
-header.top h1{font-size:18px; font-weight:700; letter-spacing:.02em;}
+  padding:8px 2px 6px; display:flex; align-items:baseline; gap:10px; border-bottom:1px solid var(--ink);}
+header.top h1{font-size:18px; font-weight:700; letter-spacing:.06em;}
 header.top .sub{color:var(--muted); font-size:13px; font-variant-numeric:tabular-nums; margin-left:auto;}
 main{padding-top:10px;}
 h2{font-size:15px; font-weight:700; letter-spacing:.04em; margin:10px 0 6px;}
 .small{font-size:12.5px; color:var(--muted);}
-.card{background:var(--surface); border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow); padding:8px 12px; margin-bottom:8px;}
-button{font:inherit; cursor:pointer; border:none; border-radius:8px; padding:8px 14px; background:var(--chip); color:var(--ink);}
+.card{background:var(--surface); border:1px solid var(--line); border-radius:3px; padding:8px 12px; margin-bottom:8px;}
+button{font:inherit; cursor:pointer; border:none; border-radius:3px; padding:8px 14px; background:var(--chip); color:var(--ink);}
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
 button.primary{background:var(--accent); color:var(--accent-ink); font-weight:700;}
 button.ghost{background:transparent; border:1px solid var(--line);}
 select,input[type=text],input[type=number],textarea{font:inherit; color:var(--ink); background:var(--surface);
-  border:1px solid var(--line); border-radius:8px; padding:7px 10px; max-width:100%;}
+  border:1px solid var(--line); border-radius:3px; padding:7px 10px; max-width:100%;}
 input[type=number]{font-variant-numeric:tabular-nums;}
 textarea{width:100%; min-height:90px;}
 .row{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
 .grow{flex:1 1 auto; min-width:0;}
-nav.tabs{position:absolute; bottom:0; left:0; right:0; z-index:30; background:var(--surface); border-top:1px solid var(--line); display:flex; justify-content:center;}
+nav.tabs{position:absolute; bottom:0; left:0; right:0; z-index:30; background:var(--surface); border-top:1px solid var(--ink); display:flex; justify-content:center;}
 nav.tabs .inner{display:flex; width:100%; max-width:720px;}
-nav.tabs button{flex:1; background:none; border-radius:0; padding:10px 0 12px; font-size:11.5px; color:var(--muted); display:flex; flex-direction:column; gap:2px; align-items:center;}
-nav.tabs button .ic{font-size:18px; line-height:1;}
+nav.tabs button{flex:1; min-width:0; background:none; border-radius:0; padding:6px 0 7px; font-size:11px; color:var(--muted); display:flex; flex-direction:column; gap:2px; align-items:center;}
 nav.tabs button.on{color:var(--accent); font-weight:700;}
-.chip{display:inline-block; font-size:12px; padding:3px 10px; border-radius:999px; background:var(--chip); color:var(--ink);}
+/* 線のアイコン（絵文字の代わり） */
+.ic{display:inline-block; width:18px; height:18px; background:currentColor; flex:none; -webkit-mask:var(--m) center/contain no-repeat; mask:var(--m) center/contain no-repeat;}
+@supports not ((mask-image:none) or (-webkit-mask-image:none)){ .ic{display:none;} }
+.ic-bolt{--m:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'><path d='M13.5 2.5L5.5 13.5h6l-1 8 8-11h-6z'/></svg>");}
+.ic-list{--m:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='3.5' y='5' width='17' height='12' rx='1'/><path d='M8 20.5h8M9.5 9l4 2-4 2z'/></svg>");}
+.ic-house{--m:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linejoin='round'><path d='M3.5 11L12 4l8.5 7'/><path d='M6 9.5V20h12V9.5'/><path d='M10 20v-5h4v5'/></svg>");}
+.ic-check{--m:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><rect x='5' y='3.5' width='14' height='17' rx='1'/><path d='M8.5 9l1.5 1.5 3-3M8.5 15h7'/></svg>");}
+.ic-gear{--m:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'><circle cx='12' cy='12' r='3.2'/><path d='M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1'/></svg>");}
+.chip{display:inline-block; font-size:12px; padding:3px 9px; border-radius:2px; background:var(--chip); color:var(--ink);}
 .chip.ng{background:var(--warn-soft); color:var(--warn); font-weight:700;}
 .chip.ok{background:var(--okbg); color:var(--ok); font-weight:700;}
 /* preset chips */
 .grouphead{font-size:12.5px; color:var(--muted); font-weight:700; letter-spacing:.05em; margin:6px 0 4px;}
 .chips{display:flex; flex-wrap:wrap; gap:6px;}
-.chips button{border:1px solid var(--line); background:var(--surface); font-size:13px; padding:6px 10px; border-radius:999px;}
-.chips button .p{color:var(--muted); font-size:11.5px;}
-/* result grid */
-.resgrid{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px;}
-@media (max-width:430px){ .resgrid{grid-template-columns:repeat(2,1fr);} }
-.res{background:var(--accent-soft); border-radius:8px; padding:5px 4px; text-align:center;}
-.res .l{font-size:11.5px; color:var(--muted);}
-.res .v{font-size:16px; font-weight:800; font-variant-numeric:tabular-nums;}
-.res.hero .v{color:var(--accent);}
+.chips button{border:1px solid var(--line); background:var(--surface); font-size:13px; padding:6px 10px; border-radius:2px;}
+.chips button .p{color:var(--muted); font-size:11.5px; font-variant-numeric:tabular-nums;}
+/* ---- 検針票（感熱紙の明細）: 4マス ---- */
+.resgrid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:0; margin-top:8px; padding:3px 0;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.018) 0 1px, transparent 1px 3px), var(--slip); color:var(--slip-ink);
+  border-top:1px solid var(--slip-line); border-bottom:1px solid var(--slip-line); box-shadow:0 1px 0 rgba(0,0,0,.05);}
+@media (max-width:430px){ .resgrid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+@media (min-width:431px) and (max-width:520px){ .res .v{font-size:14px;} }
+.res{background:transparent; border-radius:0; padding:5px 4px; text-align:center; border-left:1px dashed var(--slip-line);}
+.res:first-child{border-left:none;}
+@media (max-width:430px){ .res:nth-child(3){border-left:none;} .res:nth-child(n+3){border-top:1px dashed var(--slip-line);} }
+.res .l{font-size:11.5px; color:#5F6461; letter-spacing:.04em;}
+.res .v{font-family:var(--mono); font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.01em;}
+.res.hero .v{color:var(--slip-ink); text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:3px;}
+.res.hero .l{color:var(--slip-ink); font-weight:700;}
 .big{font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:.01em;}
 .pnum{font-variant-numeric:tabular-nums;}
 /* list rows */
@@ -100,13 +120,13 @@ nav.tabs button.on{color:var(--accent); font-weight:700;}
 .item:last-child{border-bottom:none;}
 .item .nm{flex:1; min-width:0; background:none; border:none; padding:0; font:inherit; text-align:left; color:var(--ink); cursor:pointer;}
 .item .nm .t{font-weight:600;}
-.item .nm .s{font-size:12px; color:var(--muted);}
+.item .nm .s{font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums;}
 .item .amt{font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap;}
 .item.off .nm .t,.item.off .amt{color:var(--muted);}
 .f-row{margin:8px 0;}
 .f-row .lbl{font-size:12.5px; color:var(--muted); font-weight:700; letter-spacing:.05em; margin-bottom:5px;}
 .seg{display:flex; flex-wrap:wrap; gap:6px;}
-.seg button{padding:6px 12px; font-size:13px; border:1px solid var(--line); background:var(--surface); border-radius:8px;}
+.seg button{padding:6px 12px; font-size:13px; border:1px solid var(--line); background:var(--surface); border-radius:2px;}
 .seg button.on{background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:700;}
 /* fixed-cost form */
 .moneyrow{display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid var(--line);}
@@ -116,32 +136,41 @@ nav.tabs button.on{color:var(--accent); font-weight:700;}
 .moneyrow input{width:110px; text-align:right;}
 .moneyrow .yen{color:var(--muted); font-size:13px;}
 /* progress / ratio bar */
-.pbar{height:12px; background:var(--chip); border-radius:999px; overflow:hidden; position:relative;}
-.pbar>div{height:100%; background:var(--accent); border-radius:999px; transition:width .3s;}
+.pbar{height:12px; background:var(--chip); border-radius:1px; overflow:hidden; position:relative;}
+.pbar>div{height:100%; background:var(--accent); border-radius:0; transition:width .3s;}
 .pbar>div.over{background:var(--warn);}
-.pbar .mark{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--muted); opacity:.6;}
+.pbar .mark{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--ink); opacity:.7;}
 @media (prefers-reduced-motion: reduce){ .pbar>div{transition:none;} }
 /* findings */
-.finding{border-left:4px solid var(--line); padding:2px 0 2px 10px; margin:10px 0;}
+.finding{border-left:3px solid var(--line); padding:2px 0 2px 10px; margin:10px 0;}
 .finding.ng{border-left-color:var(--warn);}
 .finding.ok{border-left-color:var(--ok);}
 .finding .ft{font-weight:700; font-size:14px;}
 .finding .fb{font-size:13.5px;}
-.finding .save{color:var(--warn); font-weight:800;}
+.finding .save{color:var(--warn); font-weight:800; font-variant-numeric:tabular-nums;}
 /* detail sheet */
 .overlay{position:absolute; inset:0; background:rgba(14,22,17,.45); z-index:40; display:flex; align-items:flex-end; justify-content:center;}
-.sheet{background:var(--surface); width:100%; max-width:720px; max-height:88vh; border-radius:14px 14px 0 0; padding:16px 16px 24px; overflow-y:auto;}
+.sheet{background:var(--surface); width:100%; max-width:720px; max-height:88vh; border-radius:3px 3px 0 0; border-top:2px solid var(--ink); padding:16px 16px 24px; overflow-y:auto;}
 .sheet h3{font-size:16px; margin-bottom:4px;}
-.notice{background:var(--warn-soft); border-radius:8px; padding:10px 12px; font-size:13.5px; margin-bottom:10px;}
-.okbox{background:var(--okbg); border-radius:8px; padding:9px 12px; font-size:13px; margin-top:8px;}
+.notice{background:var(--warn-soft); border-radius:3px; padding:10px 12px; font-size:13.5px; margin-bottom:10px;}
+.okbox{background:var(--okbg); border-left:3px solid var(--ok); border-radius:0; padding:9px 12px; font-size:13px; margin-top:8px;}
 details{margin-top:8px;}
 details summary{cursor:pointer; font-size:13.5px; padding:4px 0; font-weight:600;}
-.article h4{font-size:14px; margin:12px 0 4px;}
-.article p,.article li{font-size:13.5px;}
+.article h4{font-size:14px; margin:9px 0 3px;}
+.article p,.article li{font-size:13.5px; line-height:1.4;}
 .article ul,.article ol{padding-left:1.4em;}
-.article table{border-collapse:collapse; margin:6px 0; font-size:13px; width:100%;}
-.article th,.article td{border:1px solid var(--line); padding:4px 8px; text-align:right;}
+.article table{border-collapse:collapse; margin:5px 0; font-size:13px; width:100%; line-height:1.35;}
+.article th,.article td{border:1px solid var(--line); padding:3px 8px; text-align:right;}
 .article th:first-child,.article td:first-child{text-align:left;}
+.article td{font-variant-numeric:tabular-nums;}
+/* 狭い幅: 文節で折り返して増えた行を余白で吸収する（後ろに置いて通常の指定より優先させる） */
+@media (max-width:359px){ .card{padding-left:10px; padding-right:10px; margin-bottom:7px;} .chips button{padding-top:5px; padding-bottom:5px;} }
+@media (max-width:429px){ details summary{padding:3px 0;} .finding{margin:7px 0;} .finding .fb{line-height:1.4;} .finding .ft{line-height:1.4;} .article .small, .card > .small{line-height:1.4;} }
+@media (forced-colors: active){
+  .ic{forced-color-adjust:none; background:ButtonText;}
+  .resgrid{border:1px solid CanvasText;}
+  .seg button.on{forced-color-adjust:none; background:Highlight; color:HighlightText;}
+}
 </style>
 
 <div id="scroll-area">
@@ -157,11 +186,11 @@ details summary{cursor:pointer; font-size:13.5px; padding:4px 0; font-weight:600
   </div>
 </div>
 <nav class="tabs"><div class="inner">
-  <button data-tab="denki" class="on"><span class="ic">⚡</span>電気代</button>
-  <button data-tab="subs"><span class="ic">📺</span>サブスク</button>
-  <button data-tab="fixed"><span class="ic">🏠</span>固定費</button>
-  <button data-tab="check"><span class="ic">💡</span>診断</button>
-  <button data-tab="settings"><span class="ic">⚙️</span>設定</button>
+  <button data-tab="denki" class="on"><span class="ic ic-bolt" aria-hidden="true"></span>電気代</button>
+  <button data-tab="subs"><span class="ic ic-list" aria-hidden="true"></span>サブスク</button>
+  <button data-tab="fixed"><span class="ic ic-house" aria-hidden="true"></span>固定費</button>
+  <button data-tab="check"><span class="ic ic-check" aria-hidden="true"></span>診断</button>
+  <button data-tab="settings"><span class="ic ic-gear" aria-hidden="true"></span>設定</button>
 </div></nav>
 <div id="modal"></div>
 
@@ -385,7 +414,7 @@ function renderSubs(){
     <div class="row"><span class="grow">サブスク合計</span>
       <span class="big">月 ${yen(total)}円</span></div>
     <p class="small pnum">年に換算すると ${yen(total*12)}円</p>
-    ${waste>0?`<div class="okbox">💡「ほぼ使ってない」を解約すると <b>年 ${yen(waste*12)}円</b> 浮きます</div>`:""}
+    ${waste>0?`<div class="okbox">「ほぼ使ってない」を解約すると <b>年 ${yen(waste*12)}円</b> 浮きます</div>`:""}
   </div>`;
   html+=`<div class="card"><p class="small" style="margin-bottom:4px">よくあるサブスク(タップで追加。料金は目安なので、追加後に実際の請求額へ直してください)</p>
     <div class="chips">${SUBP.map(([n,p],i)=>`<button data-sub="${i}" ${S.subs.some(s=>s.name===n)?"disabled style='opacity:.4'":""}>${esc(n)} <span class="p">${p.toLocaleString()}円</span></button>`).join("")}</div>
@@ -623,7 +652,7 @@ function renderSettings(){
   </div>`;
   $("#btnExport").onclick=()=>{
     const t=JSON.stringify(S);
-    $("#ioArea").value=t; copyText(t,$("#btnExport"),"✅ コピーしました");
+    $("#ioArea").value=t; copyText(t,$("#btnExport"),"コピーしました");
   };
   $("#btnImport").onclick=()=>{
     try{
